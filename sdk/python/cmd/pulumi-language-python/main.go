@@ -197,8 +197,8 @@ func (host *pythonLanguageHost) prepareVirtualEnvironment(ctx context.Context, c
 	}
 
 	wrap := func(e error) error {
-		return fmt.Errorf("prepareVirtualEnvironment(host.virtualenv=%s, virutalenv=%s, cwd=%s): %w",
-			host.virtualenv, virtualenv, cwd, e)
+		return fmt.Errorf("prepareVirtualEnvironment(host.virtualenv=%s (abs=%v), virutalenv=%s (abs=%v), cwd=%s): %w",
+			host.virtualenv, path.IsAbs(host.virtualenv), virtualenv, path.IsAbs(virtualenv), cwd, e)
 	}
 
 	// If the virtual environment directory doesn't exist, create it.
