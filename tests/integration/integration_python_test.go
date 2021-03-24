@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -407,8 +408,8 @@ func TestGetResourcePython(t *testing.T) {
 }
 
 func TestAbsPathAnomaly(t *testing.T) {
-	path := "C:\\Users\\anton\\AppData\\Local\\Temp\\2\\test-env598977482\\absvenv"
-	t.Errorf("Path=%s abs=%v", path, filepath.IsAbs(path))
+	p := "C:\\Users\\anton\\AppData\\Local\\Temp\\2\\test-env598977482\\absvenv"
+	t.Errorf("Path=%s filepath.IsAbs=%v path.IsAbs=%v", p, filepath.IsAbs(p), path.IsAbs(p))
 }
 
 // Regresses https://github.com/pulumi/pulumi/issues/6471
