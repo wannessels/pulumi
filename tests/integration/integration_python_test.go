@@ -406,6 +406,11 @@ func TestGetResourcePython(t *testing.T) {
 	})
 }
 
+func TestAbsPathAnomaly(t *testing.T) {
+	path := "C:\\Users\\anton\\AppData\\Local\\Temp\\2\\test-env598977482\\absvenv"
+	t.Errorf("Path=%s abs=%v", path, filepath.IsAbs(path))
+}
+
 // Regresses https://github.com/pulumi/pulumi/issues/6471
 func TestAutomaticVenvCreation(t *testing.T) {
 	// Do not use integration.ProgramTest to avoid automatic venv
