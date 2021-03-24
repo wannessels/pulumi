@@ -185,6 +185,7 @@ func (host *pythonLanguageHost) GetRequiredPlugins(ctx context.Context,
 // prepareVirtualEnvironment will create and install dependencies in the virtual environment if host.virtualenv is set.
 // The full path to the virtual environment is returned.
 func (host *pythonLanguageHost) prepareVirtualEnvironment(ctx context.Context, cwd string) (string, error) {
+
 	virtualenv := host.virtualenv
 	if virtualenv == "" {
 		return "", nil
@@ -195,6 +196,11 @@ func (host *pythonLanguageHost) prepareVirtualEnvironment(ctx context.Context, c
 		virtualenv = filepath.Join(cwd, virtualenv)
 	}
 
+	wrap := func(e error) error {
+		return fmt.Errorf("prepareVirtualEnvironment(host.virtualenv=%s, virutalenv=%s, cwd=%s): %w",
+			host.virtualenv, virtualenv, cwd, e)
+	}
+
 	// If the virtual environment directory doesn't exist, create it.
 	var createVirtualEnv bool
 	info, err := os.Stat(virtualenv)
@@ -202,18 +208,17 @@ func (host *pythonLanguageHost) prepareVirtualEnvironment(ctx context.Context, c
 		if os.IsNotExist(err) {
 			createVirtualEnv = true
 		} else {
-			return "", err
+			return "", wrap(err)
 		}
 	} else if !info.IsDir() {
-		return "",
-			errors.Errorf("the 'virtualenv' option in Pulumi.yaml is set to %q but it is not a directory", virtualenv)
+		return "", wrap(errors.Errorf("the 'virtualenv' option in Pulumi.yaml is set to %q but it is not a directory", virtualenv))
 	}
 
 	// If the virtual environment directory exists, but is empty, it needs to be created.
 	if !createVirtualEnv {
 		empty, err := fsutil.IsDirEmpty(virtualenv)
 		if err != nil {
-			return "", err
+			return "", wrap(err)
 		}
 		createVirtualEnv = empty
 	}
@@ -227,7 +232,7 @@ func (host *pythonLanguageHost) prepareVirtualEnvironment(ctx context.Context, c
 			rpcutil.GrpcChannelOptions(),
 		)
 		if err != nil {
-			return "", errors.Wrapf(err, "language host could not make connection to engine")
+			return "", wrap(errors.Wrapf(err, "language host could not make connection to engine"))
 		}
 
 		// Make a client around that connection.
@@ -252,13 +257,13 @@ func (host *pythonLanguageHost) prepareVirtualEnvironment(ctx context.Context, c
 
 		if err := python.InstallDependenciesWithWriters(
 			cwd, virtualenv, true /*showOutput*/, infoWriter, errorWriter); err != nil {
-			return "", err
+			return "", wrap(err)
 		}
 	}
 
 	// Ensure the specified virtual directory is a valid virtual environment.
 	if !python.IsVirtualEnv(virtualenv) {
-		return "", python.NewVirtualEnvError(host.virtualenv, virtualenv)
+		return "", wrap(python.NewVirtualEnvError(host.virtualenv, virtualenv))
 	}
 
 	// Return the full path to the virtual environment.

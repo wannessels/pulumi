@@ -209,6 +209,11 @@ func InstallDependencies(root, venvDir string, showOutput bool) error {
 }
 
 func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoWriter, errorWriter io.Writer) error {
+
+	wrap := func(e error) error {
+		return fmt.Errorf("InstallDependenciesWithWriters(root=%s, venvDir=%s): %w", root, venvDir, e)
+	}
+
 	print := func(message string) {
 		if showOutput {
 			fmt.Fprintf(infoWriter, "%s\n", message)
@@ -224,13 +229,13 @@ func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoW
 
 	cmd, err := Command("-m", "venv", venvDir)
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if len(output) > 0 {
 			fmt.Fprintf(errorWriter, "%s\n", string(output))
 		}
-		return errors.Wrapf(err, "creating virtual environment at %s", venvDir)
+		return wrap(errors.Wrapf(err, "creating virtual environment at %s", venvDir))
 	}
 
 	print("Finished creating virtual environment")
@@ -241,7 +246,7 @@ func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoW
 		pipCmd.Env = ActivateVirtualEnv(os.Environ(), venvDir)
 
 		wrapError := func(err error) error {
-			return errors.Wrapf(err, "%s via '%s'", errorMsg, strings.Join(pipCmd.Args, " "))
+			return wrap(errors.Wrapf(err, "%s via '%s'", errorMsg, strings.Join(pipCmd.Args, " ")))
 		}
 
 		if showOutput {
@@ -249,7 +254,7 @@ func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoW
 			pipCmd.Stdout = infoWriter
 			pipCmd.Stderr = errorWriter
 			if err := pipCmd.Run(); err != nil {
-				return wrapError(err)
+				return wrap(wrapError(err))
 			}
 		} else {
 			// Otherwise, only show output if there is an error.
@@ -257,7 +262,7 @@ func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoW
 				if len(output) > 0 {
 					fmt.Fprintf(errorWriter, "%s\n", string(output))
 				}
-				return wrapError(err)
+				return wrap(wrapError(err))
 			}
 		}
 		return nil
@@ -267,7 +272,7 @@ func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoW
 
 	err = runPipInstall("updating pip, setuptools, and wheel", "--upgrade", "pip", "setuptools", "wheel")
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 
 	print("Finished updating")
@@ -282,7 +287,7 @@ func InstallDependenciesWithWriters(root, venvDir string, showOutput bool, infoW
 
 	err = runPipInstall("installing dependencies", "-r", "requirements.txt")
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 
 	print("Finished installing dependencies")
