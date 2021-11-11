@@ -20,33 +20,33 @@ namespace Pulumi
         /// The child resources of this resource.  We use these (only from a ComponentResource) to
         /// allow code to dependOn a ComponentResource and have that effectively mean that it is
         /// depending on all the CustomResource children of that component.
-        /// 
+        ///
         /// Important!  We only walk through ComponentResources.They're the only resources that
         /// serve as an aggregation of other primitive(i.e.custom) resources.While a custom resource
         /// can be a parent of other resources, we don't want to ever depend on those child
         /// resource.  If we do, it's simple to end up in a situation where we end up depending on a
         /// child resource that has a data cycle dependency due to the data passed into it. An
         /// example of how this would be bad is:
-        /// 
+        ///
         /// <c>
         ///     var c1 = new CustomResource("c1");
         ///     var c2 = new CustomResource("c2", { parentId = c1.id }, { parent = c1 });
         ///     var c3 = new CustomResource("c3", { parentId = c1.id }, { parent = c1 });
         /// </c>
-        /// 
+        ///
         /// The problem here is that 'c2' has a data dependency on 'c1'.  If it tries to wait on
         /// 'c1' it will walk to the children and wait on them.This will mean it will wait on 'c3'.
         /// But 'c3' will be waiting in the same manner on 'c2', and a cycle forms. This normally
         /// does not happen with ComponentResources as they do not have any data flowing into
         /// them.The only way you would be able to have a problem is if you had this sort of coding
         /// pattern:
-        /// 
+        ///
         /// <c>
         ///     var c1 = new ComponentResource("c1");
         ///     var c2 = new CustomResource("c2", { parentId = c1.urn }, { parent: c1 });
         ///     var c3 = new CustomResource("c3", { parentId = c1.urn }, { parent: c1 });
         /// </c>
-        /// 
+        ///
         /// However, this would be pretty nonsensical as there is zero need for a custom resource to
         /// ever need to reference the urn of a component resource.  So it's acceptable if that sort
         /// of pattern failed in practice.
@@ -120,8 +120,32 @@ namespace Pulumi
         private protected Resource(
             string type, string name, bool custom,
             ResourceArgs args, ResourceOptions options,
+            bool remote = false, bool dependency = false) :
+            this(_ => type, name, custom, args, options, remote, dependency)
+        {
+        }
+
+        /// <summary>
+        /// Creates and registers a new resource object.  <paramref name="typeProvider"/> is the fully
+        /// qualified type token and <paramref name="name"/> is the "name" part to use in creating a
+        /// stable and globally unique URN for the object. dependsOn is an optional list of other
+        /// resources that this resource depends on, controlling the order in which we perform
+        /// resource operations.
+        /// </summary>
+        /// <param name="typeProvider">The type of the resource.</param>
+        /// <param name="name">The unique name of the resource.</param>
+        /// <param name="custom">True to indicate that this is a custom resource, managed by a plugin.</param>
+        /// <param name="args">The arguments to use to populate the new resource.</param>
+        /// <param name="options">A bag of options that control this resource's behavior.</param>
+        /// <param name="remote">True if this is a remote component resource.</param>
+        /// <param name="dependency">True if this is a synthetic resource used internally for dependency tracking.</param>
+        private protected Resource(
+            Func<Resource, string> typeProvider, string name, bool custom,
+            ResourceArgs args, ResourceOptions options,
             bool remote = false, bool dependency = false)
         {
+            var type = typeProvider(this);
+
             if (dependency)
             {
                 _type = "";

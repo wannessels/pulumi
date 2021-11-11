@@ -1,32 +1,50 @@
-﻿// Copyright 2016-2019, Pulumi Corporation.  All rights reserved.
+﻿// Copyright 2016-2021, Pulumi Corporation.  All rights reserved.
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pulumi;
 
-//import binascii
-//import os
-//from pulumi import ComponentResource, export
-//from pulumi.dynamic import Resource, ResourceProvider, CreateResult//
+public sealed class RandomResourceProvider : DynamicResourceProvider
+{
+    public override (string, IDictionary<string, object>) Create(IDictionary<string, object> properties)
+    {
+        var random = new System.Random();
+        var buffer = new byte[15];
+        random.NextBytes(buffer);
+        var val = System.Convert.ToBase64String(buffer);
 
-//class RandomResourceProvider(ResourceProvider):
-//    def create(self, props):
-//        val = binascii.b2a_hex(os.urandom(15)).decode("ascii")
-//        return CreateResult(val, { "val": val })//
+        return (val, new Dictionary<string, object>{ { "val", val } });
+    }
+}
 
-//class Random(Resource):
-//    val: str
-//    def __init__(self, name, opts = None):
-//        super().__init__(RandomResourceProvider(), name, {"val": ""}, opts)//
+public sealed class RandomArgs : ResourceArgs
+{
+    [Input("val")]
+    public Input<string> Val { get; set; }
+}
 
-//r = Random("foo")//
+class Random : DynamicResource
+{
+    [Output("val")]
+    public Output<string> Val { get; private set; }
 
-//export("random_id", r.id)
-//export("random_val", r.val)
+    public Random(string name, CustomResourceOptions options = null)
+        : base(new RandomResourceProvider(), name, new RandomArgs() { Val = "" }, options)
+    {
+    }
+}
 
 class Program
 {
     static Task<int> Main(string[] args)
     {
-        return Deployment.RunAsync(() => {});
+        return Deployment.RunAsync(() => {
+            var r = new Random("foo");
+
+            return new Dictionary<string, object> {
+                { "random_id", r.Id },
+                { "random_val", r.Val }
+            };
+        });
     }
 }
