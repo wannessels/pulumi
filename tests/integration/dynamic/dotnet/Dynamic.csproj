@@ -5,4 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Pulumi" Version="3.18.0-alpha.1636721895" />
+  </ItemGroup>
 </Project>

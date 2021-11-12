@@ -3,32 +3,31 @@ using Grpc.Core;
 using Google.Protobuf.WellKnownTypes;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 public static class Program
 {
     class DynamicResourceProviderServicer : ResourceProvider.ResourceProviderBase
     {
+        public override Task<CheckResponse> CheckConfig(CheckRequest request, ServerCallContext context)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "CheckConfig is not implemented by the dynamic provider"));
+        }
 
-// def CheckConfig(self, request, context):
-//     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-//     context.set_details("CheckConfig is not implemented by the dynamic provider")
-//     raise NotImplementedError("CheckConfig is not implemented by the dynamic provider")
-//
-// def DiffConfig(self, request, context):
-//     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-//     context.set_details("DiffConfig is not implemented by the dynamic provider")
-//     raise NotImplementedError("DiffConfig is not implemented by the dynamic provider")
-//
-// def Invoke(self, request, context):
-//     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-//     context.set_details("Invoke is not implemented by the dynamic provider")
-//     raise NotImplementedError(
-  //  def GetSchema(self, request, context):
-  //      context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-  //      context.set_details("GetSchema is not implemented by the dynamic provider")
-  //      raise NotImplementedError("GetSchema is not implemented by the dynamic provider")f"unknown function {request.token}")
+        public override Task<DiffResponse> DiffConfig(DiffRequest request, ServerCallContext context)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "DiffConfig is not implemented by the dynamic provider"));
+        }
 
+        public override Task<InvokeResponse> Invoke(InvokeRequest request, ServerCallContext context)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "Invoke is not implemented by the dynamic provider"));
+        }
 
+        public override Task<GetSchemaResponse> GetSchema(GetSchemaRequest request, ServerCallContext context)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "GetSchema is not implemented by the dynamic provider"));
+        }
 
         public override Task<ConfigureResponse> Configure(ConfigureRequest request, ServerCallContext context)
         {
@@ -51,16 +50,71 @@ public static class Program
 
         public override Task<CreateResponse> Create(CreateRequest request, ServerCallContext context)
         {
-            throw new System.Exception("BANG");
-            //return base.Create(request, context);
+            var response = new CreateResponse();
+            response.Id = "some_id";
+            var result = new Struct();
+            result.Fields.Add("val", Value.ForString("AQIDBAUG"));
+            response.Properties = result;
+            return Task.FromResult(response);
         }
 
+        public override Task<ReadResponse> Read(ReadRequest request, ServerCallContext context)
+        {
+            var id = request.Id;
+            var props = request.Properties;
+
+            var response = new ReadResponse();
+            response.Id = id;
+            response.Properties = props;
+            return Task.FromResult(response);
+        }
+
+        public override Task<CheckResponse> Check(CheckRequest request, ServerCallContext context)
+        {
+            var response = new CheckResponse();
+            response.Inputs = request.News;
+            return Task.FromResult(response);
+        }
+
+        public override Task<DiffResponse> Diff(DiffRequest request, ServerCallContext context)
+        {
+            var response = new DiffResponse();
+            return Task.FromResult(response);
+
+            //fields = {}
+            //if result.changes is not None:
+            //    if result.changes:
+            //        fields["changes"] = proto.DiffResponse.DIFF_SOME # pylint: disable=no-member
+            //    else:
+            //        fields["changes"] = proto.DiffResponse.DIFF_NONE # pylint: disable=no-member
+            //else:
+            //    fields["changes"] = proto.DiffResponse.DIFF_UNKNOWN # pylint: disable=no-member
+            //if result.replaces is not None:
+            //    fields["replaces"] = result.replaces
+            //if result.delete_before_replace is not None:
+            //    fields["deleteBeforeReplace"] = result.delete_before_replace
+        }
+
+        public override Task<UpdateResponse> Update(UpdateRequest request, ServerCallContext context)
+        {
+            var response = new UpdateResponse();
+            response.Properties = request.News;
+            return Task.FromResult(response);
+        }
+
+        public override Task<Empty> Delete(DeleteRequest request, ServerCallContext context)
+        {
+            return Task.FromResult(new Empty());
+        }
     }
 
     public static void Main(string[] args)
     {
         var monitor = new DynamicResourceProviderServicer();
-        var server = new Server
+        // maxRpcMessageSize raises the gRPC Max Message size from `4194304` (4mb) to `419430400` (400mb)
+        var maxRpcMessageSize = 400 * 1024 * 1024;
+        var grpcChannelOptions = new List<ChannelOption> { new ChannelOption(ChannelOptions.MaxReceiveMessageLength, maxRpcMessageSize)};
+        var server = new Server(grpcChannelOptions)
             {
                 Services = { ResourceProvider.BindService(monitor) },
                 Ports = { new ServerPort("0.0.0.0", 0, ServerCredentials.Insecure) }
@@ -68,9 +122,9 @@ public static class Program
 
         server.Start();
         var port = server.Ports.First();
-        System.Console.Error.WriteLine(port.ToString());
+        System.Console.WriteLine(port.BoundPort.ToString());
 
-        System.Threading.Tasks.Task? shutdownTask = null;
+        Task? shutdownTask = null;
         var exitEvent = new System.Threading.ManualResetEventSlim();
         System.Console.CancelKeyPress += (System.ConsoleCancelEventHandler)((sender, e) => {
             shutdownTask = server.ShutdownAsync();

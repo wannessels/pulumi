@@ -9,7 +9,7 @@ namespace Pulumi
       private static string GetTypeName(Resource resource)
       {
           var type = resource.GetType();
-          var typeName = $"dynamic/{type.Namespace}:{type.Name}";
+          var typeName = string.IsNullOrEmpty(type.Namespace) ? $"dynamic:{type.Name}" : $"dynamic/{type.Namespace}:{type.Name}";;
           return $"pulumi-dotnet:{typeName}";
       }
 
