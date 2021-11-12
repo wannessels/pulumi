@@ -26,7 +26,6 @@ namespace Pulumi
               "Pulumi", "System.Collections.Immutable"
           };
           var assemblyName = assembly.GetName().Name;
-          Console.WriteLine("Assembly = {0}", assemblyName);
           return !Array.Exists(knownAssemblies, name => name == assemblyName);
       }
 
