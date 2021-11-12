@@ -4,11 +4,35 @@ using Google.Protobuf.WellKnownTypes;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 public static class Program
 {
     class DynamicResourceProviderServicer : ResourceProvider.ResourceProviderBase
     {
+        private static (Pulumi.DynamicResourceProvider, ImmutableDictionary<string, object?>) GetProvider(ImmutableDictionary<string, object?> properties)
+        {
+            if (!properties.TryGetValue("__provider", out var providerValue))
+            {
+                throw new RpcException(new Status(StatusCode.Unknown, "Dynamic resource had no '__provider' property"));
+            }
+
+            if(!(providerValue is string providerString))
+            {
+                throw new RpcException(new Status(StatusCode.Unknown, "Dynamic resource '__provider' property was not a string"));
+            }
+
+            var pickler = new Ibasa.Pikala.Pickler();
+            var memoryStream = new System.IO.MemoryStream(System.Convert.FromBase64String(providerString));
+            var provider = pickler.Deserialize(memoryStream) as Pulumi.DynamicResourceProvider;
+            if (provider == null)
+            {
+                throw new RpcException(new Status(StatusCode.Unknown, "Dynamic resource could not deserialise provider implementation"));
+            }
+
+            return (provider , properties.Remove("__provider"));
+        }
+
         public override Task<CheckResponse> CheckConfig(CheckRequest request, ServerCallContext context)
         {
             throw new RpcException(new Status(StatusCode.Unimplemented, "CheckConfig is not implemented by the dynamic provider"));
@@ -48,14 +72,19 @@ public static class Program
             return Task.FromResult(new Empty());
         }
 
-        public override Task<CreateResponse> Create(CreateRequest request, ServerCallContext context)
+        public override async Task<CreateResponse> Create(CreateRequest request, ServerCallContext context)
         {
+            var properties = Pulumi.Serialization.Rpc.DeserialiseProperties(request.Properties);
+            var (provider, inputs) = GetProvider(properties);
+
+            var (id, outputs) = await provider.Create(inputs);
+
             var response = new CreateResponse();
-            response.Id = "some_id";
-            var result = new Struct();
-            result.Fields.Add("val", Value.ForString("AQIDBAUG"));
-            response.Properties = result;
-            return Task.FromResult(response);
+            response.Id = id;
+            response.Properties = Pulumi.Serialization.Rpc.SerialiseProperties(outputs);
+            // Readd provider
+            response.Properties.Fields.Add("__provider", request.Properties.Fields["__provider"]);
+            return response;
         }
 
         public override Task<ReadResponse> Read(ReadRequest request, ServerCallContext context)

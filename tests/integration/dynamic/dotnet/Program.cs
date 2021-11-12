@@ -1,12 +1,13 @@
 ﻿// Copyright 2016-2021, Pulumi Corporation.  All rights reserved.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Pulumi;
 
 public sealed class RandomResourceProvider : DynamicResourceProvider
 {
-    public override (string, IDictionary<string, object>) Create(IDictionary<string, object> properties)
+    public override async Task<(string, IDictionary<string, object>)> Create(ImmutableDictionary<string, object> properties)
     {
         var random = new System.Random();
         var buffer = new byte[15];
@@ -17,7 +18,7 @@ public sealed class RandomResourceProvider : DynamicResourceProvider
     }
 }
 
-public sealed class RandomArgs : ResourceArgs
+public sealed class RandomArgs : DynamicResourceArgs
 {
     [Input("val")]
     public Input<string> Val { get; set; }

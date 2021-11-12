@@ -2,12 +2,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Threading.Tasks;
 
 namespace Pulumi
 {
     public abstract class DynamicResourceProvider
     {
-        public virtual (string, IDictionary<string, object?>) Create(IDictionary<string, object?> properties)
+        public virtual Task<(string, IDictionary<string, object?>)> Create(ImmutableDictionary<string, object?> properties)
         {
             throw new NotImplementedException();
         }

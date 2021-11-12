@@ -100,7 +100,7 @@ namespace Pulumi.Serialization
                 });
 
         public static OutputData<object?> Deserialize(Value value)
-            => DeserializeCore(value, 
+            => DeserializeCore(value,
                 v => v.KindCase switch
                 {
                     Value.KindOneofCase.NumberValue => DeserializerDouble(v),
