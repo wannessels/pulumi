@@ -25,7 +25,7 @@ namespace Pulumi
           var knownAssemblies = new string [] {
               "Pulumi", "System.Collections.Immutable"
           };
-          return Array.Exists(knownAssemblies, name => name == assembly.FullName);
+          return !Array.Exists(knownAssemblies, name => name == assembly.FullName);
       }
 
       private static ResourceArgs SetProvider(DynamicResourceProvider provider, DynamicResourceArgs? args)

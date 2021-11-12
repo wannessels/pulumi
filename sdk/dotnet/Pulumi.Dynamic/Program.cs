@@ -10,16 +10,20 @@ public static class Program
 {
     class DynamicResourceProviderServicer : ResourceProvider.ResourceProviderBase
     {
-        private static (Pulumi.DynamicResourceProvider, ImmutableDictionary<string, object?>) GetProvider(ImmutableDictionary<string, object?> properties)
+        private static (Pulumi.DynamicResourceProvider, ImmutableDictionary<string, object?>) GetProvider(Struct properties)
         {
-            if (!properties.TryGetValue("__provider", out var providerValue))
+            var fields = properties.Fields;
+
+            if (!fields.TryGetValue("__provider", out var providerValue))
             {
-                var props = string.Concat(properties.Select(item => string.Format("{0} = {1}", item.Key, item.Value)));
+                var props = string.Concat(fields.Select(item => string.Format("{0} = {1}", item.Key, item.Value)));
                 var msg = string.Format("Dynamic resource had no '__provider' property, was: {0}", props);
                 throw new RpcException(new Status(StatusCode.Unknown, msg));
             }
 
-            if(!(providerValue is string providerString))
+            var providerString = providerValue.StringValue;
+
+            if(providerString == null)
             {
                 throw new RpcException(new Status(StatusCode.Unknown, "Dynamic resource '__provider' property was not a string"));
             }
@@ -32,7 +36,7 @@ public static class Program
                 throw new RpcException(new Status(StatusCode.Unknown, "Dynamic resource could not deserialise provider implementation"));
             }
 
-            return (provider , properties.Remove("__provider"));
+            return (provider, Pulumi.Serialization.Rpc.DeserialiseProperties(properties));
         }
 
         public override Task<CheckResponse> CheckConfig(CheckRequest request, ServerCallContext context)
@@ -77,8 +81,7 @@ public static class Program
         public override async Task<CreateResponse> Create(CreateRequest request, ServerCallContext context)
         {
             try {
-                var properties = Pulumi.Serialization.Rpc.DeserialiseProperties(request.Properties);
-                var (provider, inputs) = GetProvider(properties);
+                var (provider, inputs) = GetProvider(request.Properties);
 
                 var (id, outputs) = await provider.Create(inputs);
 
@@ -86,7 +89,7 @@ public static class Program
                 response.Id = id;
                 response.Properties = Pulumi.Serialization.Rpc.SerialiseProperties(outputs);
                 // Readd provider
-                response.Properties.Fields.Add("__provider", request.Properties.Fields["__provider"]);
+                response.Properties.Fields.Add("__provider",  request.Properties.Fields["__provider"]);
                 return response;
             } catch (System.Exception ex)
             {
