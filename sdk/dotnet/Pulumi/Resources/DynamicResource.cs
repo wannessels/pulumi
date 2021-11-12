@@ -6,8 +6,8 @@ namespace Pulumi
 {
     public class DynamicResourceArgs : ResourceArgs
     {
-        [Input("__provider")]
-        internal string Provider { get; set; } = null!;
+        [Input("__provider", required: true)]
+        public Input<string> Provider { get; set; } = null!;
     }
 
     public class DynamicResource : CustomResource
@@ -21,8 +21,11 @@ namespace Pulumi
 
       private static bool ByValueFilter(System.Reflection.Assembly assembly)
       {
-          var pulumiAssembly = System.Reflection.Assembly.GetExecutingAssembly();
-          return assembly != pulumiAssembly;
+          // Assemblies known to be used for defining dynamic providers
+          var knownAssemblies = new string [] {
+              "Pulumi", "System.Collections.Immutable"
+          };
+          return Array.Exists(knownAssemblies, name => name == assembly.FullName);
       }
 
       private static ResourceArgs SetProvider(DynamicResourceProvider provider, DynamicResourceArgs? args)

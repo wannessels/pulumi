@@ -14,7 +14,9 @@ public static class Program
         {
             if (!properties.TryGetValue("__provider", out var providerValue))
             {
-                throw new RpcException(new Status(StatusCode.Unknown, "Dynamic resource had no '__provider' property"));
+                var props = string.Concat(properties.Select(item => string.Format("{0} = {1}", item.Key, item.Value)));
+                var msg = string.Format("Dynamic resource had no '__provider' property, was: {0}", props);
+                throw new RpcException(new Status(StatusCode.Unknown, msg));
             }
 
             if(!(providerValue is string providerString))
@@ -74,17 +76,22 @@ public static class Program
 
         public override async Task<CreateResponse> Create(CreateRequest request, ServerCallContext context)
         {
-            var properties = Pulumi.Serialization.Rpc.DeserialiseProperties(request.Properties);
-            var (provider, inputs) = GetProvider(properties);
+            try {
+                var properties = Pulumi.Serialization.Rpc.DeserialiseProperties(request.Properties);
+                var (provider, inputs) = GetProvider(properties);
 
-            var (id, outputs) = await provider.Create(inputs);
+                var (id, outputs) = await provider.Create(inputs);
 
-            var response = new CreateResponse();
-            response.Id = id;
-            response.Properties = Pulumi.Serialization.Rpc.SerialiseProperties(outputs);
-            // Readd provider
-            response.Properties.Fields.Add("__provider", request.Properties.Fields["__provider"]);
-            return response;
+                var response = new CreateResponse();
+                response.Id = id;
+                response.Properties = Pulumi.Serialization.Rpc.SerialiseProperties(outputs);
+                // Readd provider
+                response.Properties.Fields.Add("__provider", request.Properties.Fields["__provider"]);
+                return response;
+            } catch (System.Exception ex)
+            {
+                throw new RpcException(new Status(StatusCode.Unknown, ex.Message));
+            }
         }
 
         public override Task<ReadResponse> Read(ReadRequest request, ServerCallContext context)

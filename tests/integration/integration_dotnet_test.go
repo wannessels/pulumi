@@ -596,8 +596,9 @@ func TestAboutDotnet(t *testing.T) {
 func TestDynamicDotnet(t *testing.T) {
 	var randomVal string
 	integration.ProgramTest(t, &integration.ProgramTestOptions{
-		Dir:          filepath.Join("dynamic", "dotnet"),
-		Dependencies: []string{"Pulumi"},
+		PreviewCommandlineFlags: "-v9",
+		Dir:                     filepath.Join("dynamic", "dotnet"),
+		Dependencies:            []string{"Pulumi"},
 		ExtraRuntimeValidation: func(t *testing.T, stack integration.RuntimeValidationStackInfo) {
 			randomVal = stack.Outputs["random_val"].(string)
 		},

@@ -10,7 +10,7 @@ namespace Pulumi.Serialization
         public static ImmutableDictionary<string, object?> DeserialiseProperties(Struct properties)
         {
             var output = Deserializer.Deserialize(Value.ForStruct(properties));
-            if (!output.IsKnown || !output.IsSecret)
+            if (!output.IsKnown || output.IsSecret)
             {
                 throw new Exception("Deserialize of a Struct should always be known and not secret!");
             }
