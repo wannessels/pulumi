@@ -47,6 +47,7 @@
     <PackageReference Include="semver" Version="2.0.6" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+    <PackageReference Include="Ibasa.Pikala" Version="0.0.9" />
   </ItemGroup>
 
   <ItemGroup>
